@@ -4,6 +4,14 @@ import database from './db/index.js'
 dotenv.config({path: './env'})
 
 database()
+.then(() => {
+    app.listen(process.env.PORT || 8000, () => {
+        console.log(`server is listening on port : ${process.env.PORT}`)
+    })
+})
+.catch((error) => {
+    console.log("connection failed", error)
+})
 
 
 
