@@ -6,64 +6,78 @@ import { apiResponse } from "../utils/apiResponse.js";
 
 
 const registerUser = asyncHandler(async (req, res) => {
-    
-    const {fullName, username, email, password } = req.body
-    console.log("email:", email)
-    
-    //check for validation
+     
+    const {username,email,fullName,password} = req.body
 
-    if([fullName, username, email, password].some((field) =>
-    field?.trim() === "")){
-        throw new apiError(400, "all fields are required")
+    //validation
+
+    if([username,email,fullName,password].some((field) =>
+    field?.trim() === "")) {
+        throw new apiError(400, "enter correct details")
     }
-    // check if user already exists
-    const existedUser = await User.findOne({
-        $or: [{username}, {email}]
+
+    //check if user already exists
+
+     const existedUser = await User.findOne({
+        $or : [{username}, {email}]
     })
+
     if(existedUser){
-        throw new apiError(409, "user with email or username already exists")
-    }
+       throw new apiError(400, "user already exists")}
+      
+    // take url of files 
 
-    // check for avatar and coverImage
-
+    // console.log(req.files)
     const avatarLocalPath = req.files?.avatar[0]?.path
-    const coverImageLocalPath = req.files?.coverImage[0]?.path
+    // const coverImageLocalPath = req.files?.coverImage[0]?.path
+
+    let coverImageLocalPath;
+    if (req.files && 
+        Array.isArray(req.files.coverImage) && 
+        req.files.coverImage.length > 0){
+        coverImageLocalPath = req.files.coverImage[0].path       
+    }
 
     if(!avatarLocalPath){
-        throw new apiError(400, "avatar is required")
+        throw new apiError(400, "req")
     }
-
-    // upload files to cloudinary
+     
+      // upload file to cloudinary
 
     const avatar = await uploadFile(avatarLocalPath)
     const coverImage = await uploadFile(coverImageLocalPath)
 
-    if (!avatar) {
-        throw new apiError(400, "avatar is required")
+
+    if(!avatar){
+        throw new apiError(401, "avatar is required")
     }
 
-    // create user object and enter in db
+    // create user entry in db
 
     const user = await User.create({
         fullName,
         avatar: avatar.url,
         coverImage: coverImage?.url || "",
         email,
-        username: username.toLowerCase()
+        password,
+        username:username.toLowerCase()
     })
 
     // check for user creation
+
+
     const createdUser = await User.findById(user._id).select(
         "-password -refreshToken"
     )
 
     if(!createdUser){
-        throw new apiError(500, "something went wrong")
+        throw new apiError(500, "failed to register user")
     }
 
-    return res.status(201).json(
-        new apiResponse(200, createdUser, "user registered successfully")
+    return res.status (201).json(
+        new apiResponse(200, createdUser, "created user successfully")
     )
+
 })
 
 export {registerUser}
