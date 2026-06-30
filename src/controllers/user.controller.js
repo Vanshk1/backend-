@@ -201,14 +201,14 @@ const logoutUser = asyncHandler(async (req, res) => {
     }
 
     return res.status(200)
-    .clearCookie("accessToken", options)
-    .clearCookie("refreshToken", options)
-    .json(new apiResponse(200, {}, "user logged out successfully"))
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(new apiResponse(200, {}, "user logged out successfully"))
 
 
 })
 
-const refreshAccessToken = asyncHandler(async(req, res) => {
+const refreshAccessToken = asyncHandler(async (req, res) => {
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
 
     if (!incomingRefreshToken) {
@@ -217,46 +217,46 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
 
     try {
         const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
-    
+
         const user = await User.findById(decodedToken?._id)
-    
+
         if (!user) {
             throw new apiError(401, "invalid refresh token")
         }
-    // verify whether incoming refresh token is equal to the stored refresh token 
-        if(incomingRefreshToken !== user?.refreshToken){
+        // verify whether incoming refresh token is equal to the stored refresh token 
+        if (incomingRefreshToken !== user?.refreshToken) {
             throw new apiError(401, "refresh token is expired or used")
         }
-    
+
         const options = {
             httpOnly: true,
             secure: true
         }
-    
-        const {accessToken, newRefreshToken} = await generateAccessAndRefreshToken(user._id)
-    
+
+        const { accessToken, newRefreshToken } = await generateAccessAndRefreshToken(user._id)
+
         return res
-        .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", newRefreshToken, options)
-        .json(
-            new apiResponse(
-                200,
-                {accessToken, refreshToken : newRefreshToken},
-                "access token refreshed"
-    
+            .status(200)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", newRefreshToken, options)
+            .json(
+                new apiResponse(
+                    200,
+                    { accessToken, refreshToken: newRefreshToken },
+                    "access token refreshed"
+
+                )
             )
-        )
     } catch (error) {
         throw new apiError(400, error?.message || "invalid refresh token")
     }
-  
+
 })
 
-const changeCurrentPassword = asyncHandler(async(req, res) => {
-    const {oldPassword, newPassword} = req.body
-    
-// first user would be loggedIn so we will find it by this : 
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = req.body
+
+    // first user would be loggedIn so we will find it by this : 
 
     const user = await User.findById(req.user?._id)
 
@@ -264,7 +264,7 @@ const changeCurrentPassword = asyncHandler(async(req, res) => {
 
     const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
 
-    if(!isPasswordCorrect){
+    if (!isPasswordCorrect) {
         throw new apiError(400, "invalid password")
     }
 
@@ -274,49 +274,49 @@ const changeCurrentPassword = asyncHandler(async(req, res) => {
 
     // save in db
 
-    await user.save({validateBeforeSave: false})
+    await user.save({ validateBeforeSave: false })
 
     return res
-    .status(200)
-    .json(
-        new apiResponse(200, {}, "password changed successfully")
-    )
-    
+        .status(200)
+        .json(
+            new apiResponse(200, {}, "password changed successfully")
+        )
+
 })
 
-const getCurrentUser = asyncHandler(async(req, res) => {
+const getCurrentUser = asyncHandler(async (req, res) => {
     return res
-    .status(200)
-    .json(new apiResponse(200, req.user, "user fetched successfully"))
+        .status(200)
+        .json(new apiResponse(200, req.user, "user fetched successfully"))
 })
 
-const updateAccountDetails = asyncHandler(async(req, res) => {
-    const {fullName, email} = req.body
+const updateAccountDetails = asyncHandler(async (req, res) => {
+    const { fullName, email } = req.body
 
-    if(!(fullName || email)) {
+    if (!(fullName || email)) {
         throw new apiError(400, "all fields are required")
     }
 
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
-            $set : {
+            $set: {
                 fullName,
                 email: email      // either is fine
             }
         },
-        {new: true }
+        { new: true }
     ).select("-password -refreshToken")
 
     return res
-    .status(200)
-    .json(new apiResponse(200, user, "user updated successfully"))
+        .status(200)
+        .json(new apiResponse(200, user, "user updated successfully"))
 })
 
-const updateUserAvatar = asyncHandler(async(req, res) => {
+const updateUserAvatar = asyncHandler(async (req, res) => {
     const avatarLocalPath = req.file?.path
 
-    if(!avatarLocalPath) {
+    if (!avatarLocalPath) {
         throw new apiError(400, "avatar file is missing")
     }
 
@@ -324,7 +324,7 @@ const updateUserAvatar = asyncHandler(async(req, res) => {
 
     const avatar = await uploadFile(avatarLocalPath)
 
-    if(!avatar) {
+    if (!avatar) {
         throw new apiError(500, "avatar not uploaded")
     }
 
@@ -336,18 +336,18 @@ const updateUserAvatar = asyncHandler(async(req, res) => {
             $set: {
                 avatar: avatar.url
             }
-        },{new: true}
+        }, { new: true }
     ).select("-password -refreshToken")
 
     return res
-    .status(200)
-    .json(new apiResponse(200, user, "avatar updated successfully "))
+        .status(200)
+        .json(new apiResponse(200, user, "avatar updated successfully "))
 })
 
-const updateUserCoverImage = asyncHandler(async(req, res) => {
+const updateUserCoverImage = asyncHandler(async (req, res) => {
     const CoverImageLocalPath = req.file?.path
 
-    if(!coverImageLocalPath) {
+    if (!coverImageLocalPath) {
         throw new apiError(400, "cover file is missing")
     }
 
@@ -355,7 +355,7 @@ const updateUserCoverImage = asyncHandler(async(req, res) => {
 
     const coverImage = await uploadFile(coverImageLocalPath)
 
-    if(!coverImage) {
+    if (!coverImage) {
         throw new apiError(500, "avatar not uploaded")
     }
 
@@ -367,13 +367,92 @@ const updateUserCoverImage = asyncHandler(async(req, res) => {
             $set: {
                 coverImage: coverImage.url
             }
-        },{new: true}
+        }, { new: true }
     ).select("-password -refreshToken")
 
     return res
-    .status(200)
-    .json(new apiResponse(200, user, "coverImage updated successfully"))
+        .status(200)
+        .json(new apiResponse(200, user, "coverImage updated successfully"))
 })
 
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+    // take username from the url eg youtube.com/vanshk1
+    const { username } = req.params
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updateUserAvatar, updateUserCoverImage }
+    if (!username?.trim()) {
+        throw new apiError(400, "user is missing")
+    }
+
+    // first use $match which is similar to find()
+    const channel = await User.aggregate([{
+        $match: {
+            username: username?.toLowerCase()
+        }
+    },
+    {
+        // lookup is basically joins
+        $lookup: {
+            from: "subscriptions",    // bcoz mongodb converts name to small and adds an s
+            localField: "_id",
+            foreignField: "channel",  // to get subscribers use channels
+            as: "subscribers"
+        }
+
+    },
+    // another pipeline for how many channels user has subscribed
+    {
+        $lookup: {
+            from: "subscriptions",
+            localField: "_id",
+            foreignField: "subscriber",
+            as: "subscribedTo"
+        }
+
+    },
+    // now we need to count how many subscribers channel has for that we'll use another pipeline
+    {
+        $addFields: {                // creates a new field 
+            subscribersCount: {
+                $size: "$subscribers"    // size gives the count 
+            },
+            channelsSubscribedToCount: {
+                $size: "$subscribedTo"
+            },
+            // to let user know whether channel is subscribed or not
+            isSubscribed: {
+                $cond: {           // takes if then else
+                    if: {$in: [req.user?._id, "$subscribers.subscriber"]},  // $in means whether  something is present or not takes an array
+                    then: true,
+                    else: false
+                }
+            }
+        }
+    },
+    {
+        $project: {      // displays only what we need to show 
+            fullName: 1,
+            username: 1,
+            subscribersCount: 1,
+            channelsSubscribedToCount: 1,
+            isSubscribed: 1,
+            avatar: 1,
+            coverImage: 1
+
+        }
+    }
+
+    ])
+
+    if (!channel?.length) {
+        throw new apiError(404, "channel does not exist")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new apiResponse(200, channel[0], "user channel fetched successfully")
+    )
+
+})
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile }
