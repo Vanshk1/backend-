@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js"
 import { uploadFile } from "../utils/fileUpload.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken"
+import mongoose from "mongoose";
 
 
 const generateAccessAndRefreshToken = async (userId) => {
@@ -455,4 +456,52 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 
 })
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile }
+const getWatchHistory = asyncHandler(async(req, res) => {
+    const user = User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user._id)
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localfield: "watchHistory",
+                foreignfield: "_id",
+                as: "watchHistory",
+                pipeline: [              // to get user details from video model
+                    {
+                        $lookup: {
+                            from: "users",
+                            localfield: "owner",
+                            foreignfield: "_id",
+                            as: "owner",
+                            pipeline: [{
+                                $project: {
+                                    username: 1,
+                                    fullName: 1,
+                                    avatar: 1
+                                }
+                            }]
+                        }
+                    },
+                    {
+                        $addFields: {
+                            owner: {
+                                $first: "$owner"    // gives the first element from the o/p array
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+    res
+    .status(200)
+    .json(
+        new apiResponse(200, user[0].watchHistory, "watch history fetched successfully")
+    )
+})
+
+export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory }
